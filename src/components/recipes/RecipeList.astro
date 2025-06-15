@@ -1,0 +1,33 @@
+---
+const base = import.meta.env.SITE || 'http://localhost:4321';
+const res = await fetch(`${base}/api/recipes`);
+const recipes = await res.json();
+---
+
+<section class="p-4">
+  <h2 class="text-2xl font-bold mb-4">Recipes</h2>
+  <table class="min-w-full bg-white border border-gray-200 rounded-lg">
+    <thead>
+      <tr class="bg-gray-100">
+        <th class="py-2 px-4">Name</th>
+        <th class="py-2 px-4">Ingredients</th>
+        <th class="py-2 px-4">Instructions</th>
+      </tr>
+    </thead>
+    <tbody>
+      {recipes.length === 0 ? (
+        <tr><td colspan="3" class="text-center py-4">No recipes found.</td></tr>
+      ) : (
+        recipes.map(recipe => (
+          <tr class="border-t" key={recipe.recipe_id}>
+            <td class="py-2 px-4 font-semibold">{recipe.name}</td>
+            <td class="py-2 px-4">
+              {recipe.ingredients ? recipe.ingredients.map(ing => ing.ingredient_name).join(', ') : '—'}
+            </td>
+            <td class="py-2 px-4 whitespace-pre-line">{recipe.instructions}</td>
+          </tr>
+        ))
+      )}
+    </tbody>
+  </table>
+</section>

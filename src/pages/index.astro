@@ -1,0 +1,71 @@
+---
+import Welcome from '../components/Welcome.astro';
+import Layout from '../layouts/Layout.astro';
+import InventoryList from '../components/inventory/InventoryList.astro';
+import Notifications from '../components/inventory/Notifications.astro';
+import RecipeList from '../components/recipes/RecipeList.astro';
+import ShoppingList from '../components/shopping/ShoppingList.astro';
+import { getAllFoodItems } from '../lib/db';
+
+const items = await getAllFoodItems();
+const uniqueNames = [...new Set(items.map(item => item.name))];
+---
+
+<Layout>
+	<main class="container mx-auto p-4">
+    <div id="draggable-lists">
+      <section class="mb-6" data-list="notifications">
+        <Notifications />
+      </section>
+      <section class="mb-6" data-list="inventory">
+        <InventoryList items={items} uniqueNames={uniqueNames} />
+      </section>
+      <section class="mb-6" data-list="recipes">
+        <RecipeList />
+      </section>
+      <section data-list="shopping">
+        <ShoppingList />
+      </section>
+    </div>
+	</main>
+  <script is:client>
+    // Simple drag-and-drop for reordering sections
+    const container = document.getElementById('draggable-lists');
+    let dragged = null;
+    container.querySelectorAll('section').forEach(section => {
+      section.setAttribute('draggable', 'true');
+      section.addEventListener('dragstart', (e) => {
+        dragged = section;
+        section.style.opacity = '0.5';
+      });
+      section.addEventListener('dragend', (e) => {
+        section.style.opacity = '';
+        dragged = null;
+      });
+      section.addEventListener('dragover', (e) => {
+        e.preventDefault();
+      });
+      section.addEventListener('drop', (e) => {
+        e.preventDefault();
+        if (dragged && dragged !== section) {
+          // If dropping on the topmost section, insert before
+          if (section === container.firstElementChild) {
+            container.insertBefore(dragged, section);
+          } else {
+            container.insertBefore(dragged, section.nextSibling);
+          }
+        }
+      });
+    });
+    // Special: drag shopping list to top if dropped on top
+    const shoppingSection = container.querySelector('section[data-list="shopping"]');
+    if (shoppingSection) {
+      shoppingSection.addEventListener('dragend', () => {
+        if (shoppingSection.parentElement.firstElementChild !== shoppingSection) {
+          // If dropped at top, move to top
+          container.insertBefore(shoppingSection, container.firstElementChild);
+        }
+      });
+    }
+  </script>
+</Layout>

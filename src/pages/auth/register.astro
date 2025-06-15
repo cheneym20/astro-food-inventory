@@ -1,0 +1,101 @@
+---
+import { z } from 'zod';
+import { query } from '../../lib/db.ts';
+
+const schema = z.object({
+  email: z.string().email(),
+  password: z.string().min(8, 'Password must be at least 8 characters'),
+  confirmPassword: z.string(),
+}).refine((data) => data.password === data.confirmPassword, {
+  message: "Passwords don't match",
+  path: ['confirmPassword'],
+});
+
+let formError: string | null = null;
+let formSuccess: string | null = null;
+
+if (Astro.request.method === 'POST') {
+  const formData = await Astro.request.formData();
+  const email = formData.get('email')?.toString() ?? '';
+  const password = formData.get('password')?.toString() ?? '';
+  const confirmPassword = formData.get('confirmPassword')?.toString() ?? '';
+
+  const result = schema.safeParse({ email, password, confirmPassword });
+
+  if (!result.success) {
+    formError = result.error.errors[0].message;
+  } else {
+    // Check if user exists
+    const { rows } = await query('SELECT * FROM users WHERE email = $1', [email]);
+    if (rows.length > 0) {
+      formError = 'Email already registered.';
+    } else {
+      // Hash password (simple example, use bcrypt in production)
+      const hash = Buffer.from(password).toString('base64');
+      await query(
+        'INSERT INTO users (email, password_hash, created_at) VALUES ($1, $2, NOW())',
+        [email, hash]
+      );
+      formSuccess = 'Registration successful! You can now log in.';
+    }
+  }
+}
+---
+
+<html lang="en">
+  <head>
+    <title>Register | Food Inventory Manager</title>
+    <meta name="description" content="Register for the Home Food Inventory Manager" />
+  </head>
+  <body class="bg-gray-50 min-h-screen flex items-center justify-center">
+    <main class="w-full max-w-md bg-white rounded-lg shadow p-8">
+      <h1 class="text-2xl font-bold mb-6 text-center">Create Account</h1>
+      {formError && <div class="mb-4 text-red-600">{formError}</div>}
+      {formSuccess && <div class="mb-4 text-green-600">{formSuccess}</div>}
+      <form method="POST" class="space-y-4" autocomplete="off">
+        <label class="block">
+          <span class="block mb-1 font-medium">Email</span>
+          <input
+            name="email"
+            type="email"
+            required
+            class="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring focus:border-blue-400"
+            autocomplete="username"
+          />
+        </label>
+        <label class="block">
+          <span class="block mb-1 font-medium">Password</span>
+          <input
+            name="password"
+            type="password"
+            required
+            minlength="8"
+            class="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring focus:border-blue-400"
+            autocomplete="new-password"
+          />
+        </label>
+        <label class="block">
+          <span class="block mb-1 font-medium">Confirm Password</span>
+          <input
+            name="confirmPassword"
+            type="password"
+            required
+            minlength="8"
+            class="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring focus:border-blue-400"
+            autocomplete="new-password"
+          />
+        </label>
+        <button
+          type="submit"
+          class="w-full bg-blue-600 text-white font-semibold py-2 rounded hover:bg-blue-700 transition"
+        >
+          Register
+        </button>
+      </form>
+      <p class="mt-4 text-center text-sm">
+        Already have an account?
+        <a href="/auth/login" class="text-blue-600 hover:underline">Log in</a>
+      </p>
+    </main>
+  </body>
+</html>

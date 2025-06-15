@@ -1,0 +1,162 @@
+---
+const { items = [], uniqueNames = [] } = Astro.props;
+---
+<section class="p-4">
+  <h2 class="text-2xl font-bold mb-4">Inventory</h2>
+  <form id="add-item-form" class="mb-6 flex flex-wrap gap-2 items-end bg-gray-50 p-4 rounded shadow">
+    <div class="relative">
+      <select id="name-select" class="border rounded px-2 py-1 pr-8" style="min-width: 120px;" tabindex="1">
+        <option value="">Select food...</option>
+        {uniqueNames.map(name => <option value={name}>{name}</option>)}
+        <option value="__custom__">Other (type manually)</option>
+      </select>
+      <input name="name" id="name-input" type="text" placeholder="Name" required class="border rounded px-2 py-1 absolute left-0 top-0 w-full hidden" style="min-width: 120px;" tabindex="1" />
+    </div>
+    <input name="quantity" id="quantity-input" type="number" placeholder="Quantity" required class="border rounded px-2 py-1" />
+    <select name="location" required class="border rounded px-2 py-1">
+      <option value="">Location</option>
+      <option value="Pantry">Pantry</option>
+      <option value="Refrigerator">Refrigerator</option>
+      <option value="Freezer">Freezer</option>
+    </select>
+    <input id="expiration-date-input" name="expiration_date" type="date" required class="border rounded px-2 py-1" />
+    <input type="hidden" name="user_id" value="1" />
+    <button type="submit" class="bg-blue-600 text-white px-4 py-1 rounded">Add</button>
+    <span id="add-item-message" class="ml-4 text-sm"></span>
+  </form>
+  <div id="inventory-table-wrapper">
+    <table class="min-w-full bg-white border border-gray-200 rounded-lg">
+      <thead>
+        <tr class="bg-gray-100">
+          <th class="py-2 px-4 text-left">
+            Name
+            <button class="sort-btn" data-key="name" data-dir="asc" aria-label="Sort ascending" tabindex="0">▲</button>
+            <button class="sort-btn" data-key="name" data-dir="desc" aria-label="Sort descending" tabindex="0">▼</button>
+          </th>
+          <th class="py-2 px-4 text-left">
+            Quantity
+            <button class="sort-btn" data-key="quantity" data-dir="asc" aria-label="Sort ascending" tabindex="0">▲</button>
+            <button class="sort-btn" data-key="quantity" data-dir="desc" aria-label="Sort descending" tabindex="0">▼</button>
+          </th>
+          <th class="py-2 px-4 text-left">
+            Location
+            <button class="sort-btn" data-key="location" data-dir="asc" aria-label="Sort ascending" tabindex="0">▲</button>
+            <button class="sort-btn" data-key="location" data-dir="desc" aria-label="Sort descending" tabindex="0">▼</button>
+          </th>
+          <th class="py-2 px-4 text-left">
+            Expiration
+            <button class="sort-btn" data-key="expiration_date" data-dir="asc" aria-label="Sort ascending" tabindex="0">▲</button>
+            <button class="sort-btn" data-key="expiration_date" data-dir="desc" aria-label="Sort descending" tabindex="0">▼</button>
+          </th>
+          <th class="py-2 px-4"></th>
+        </tr>
+      </thead>
+      <tbody id="inventory-table-body">
+        {Array.isArray(items) && items.length === 0 ? (
+          <tr><td colspan="5" class="text-center py-4">No items found.</td></tr>
+        ) : (
+          Array.isArray(items) && items.slice(0, 10).map(item => {
+            let exp = '';
+            if (item && item.expiration_date) {
+              if (typeof item.expiration_date === 'string') {
+                exp = item.expiration_date.split('T')[0];
+              } else if (item.expiration_date instanceof Date) {
+                exp = item.expiration_date.toISOString().split('T')[0];
+              } else {
+                exp = String(item.expiration_date).slice(0, 10);
+              }
+            }
+            return (
+              <tr class="border-t" key={item.item_id}>
+                <td class="py-2 px-4">{item.name}</td>
+                <td class="py-2 px-4">{item.quantity}</td>
+                <td class="py-2 px-4">{item.location}</td>
+                <td class="py-2 px-4">{exp}</td>
+                <td class="py-2 px-4">
+                  <form class="remove-item-form" data-id={item.item_id} style="display:inline">
+                    <button type="submit" class="text-red-600 hover:underline">Remove</button>
+                  </form>
+                </td>
+              </tr>
+            );
+          })
+        )}
+      </tbody>
+    </table>
+    <div class="flex justify-center mt-4" id="inventory-paginator">
+      <button id="prev-page" class="px-3 py-1 mx-1 rounded bg-gray-200 text-gray-700 disabled:opacity-50" disabled>Previous</button>
+      <span id="page-indicator" class="px-3 py-1 mx-1"></span>
+      <button id="next-page" class="px-3 py-1 mx-1 rounded bg-gray-200 text-gray-700 disabled:opacity-50">Next</button>
+    </div>
+  </div>
+</section>
+<script is:client>
+let allItems = Array.isArray(items) ? [...items] : [];
+let currentPage = 1;
+const pageSize = 10;
+
+function renderInventoryPage(page) {
+  const tbody = document.getElementById('inventory-table-body');
+  if (!tbody) return;
+  const start = (page - 1) * pageSize;
+  const end = start + pageSize;
+  const pagedItems = allItems.slice(start, end);
+  tbody.innerHTML = pagedItems.length === 0
+    ? '<tr><td colspan="5" class="text-center py-4">No items found.</td></tr>'
+    : pagedItems.map(item => {
+        let exp = '';
+        if (item && item.expiration_date) {
+          if (typeof item.expiration_date === 'string') {
+            exp = item.expiration_date.split('T')[0];
+          } else if (item.expiration_date instanceof Date) {
+            exp = item.expiration_date.toISOString().split('T')[0];
+          } else {
+            exp = String(item.expiration_date).slice(0, 10);
+          }
+        }
+        return `
+          <tr class="border-t" key="${item.item_id}">
+            <td class="py-2 px-4">${item.name}</td>
+            <td class="py-2 px-4">${item.quantity}</td>
+            <td class="py-2 px-4">${item.location}</td>
+            <td class="py-2 px-4">${exp}</td>
+            <td class="py-2 px-4">
+              <form class="remove-item-form" data-id="${item.item_id}" style="display:inline">
+                <button type="submit" class="text-red-600 hover:underline">Remove</button>
+              </form>
+            </td>
+          </tr>
+        `;
+      }).join('');
+}
+
+function updatePaginator() {
+  const pageIndicator = document.getElementById('page-indicator');
+  const prevBtn = document.getElementById('prev-page');
+  const nextBtn = document.getElementById('next-page');
+  const totalPages = Math.ceil(allItems.length / pageSize);
+  pageIndicator.textContent = `Page ${currentPage} of ${totalPages}`;
+  prevBtn.disabled = currentPage === 1;
+  nextBtn.disabled = currentPage === totalPages || totalPages === 0;
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  renderInventoryPage(currentPage);
+  updatePaginator();
+  document.getElementById('prev-page').addEventListener('click', () => {
+    if (currentPage > 1) {
+      currentPage--;
+      renderInventoryPage(currentPage);
+      updatePaginator();
+    }
+  });
+  document.getElementById('next-page').addEventListener('click', () => {
+    const totalPages = Math.ceil(allItems.length / pageSize);
+    if (currentPage < totalPages) {
+      currentPage++;
+      renderInventoryPage(currentPage);
+      updatePaginator();
+    }
+  });
+});
+</script>

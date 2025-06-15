@@ -1,0 +1,21 @@
+---
+const base = import.meta.env.SITE || 'http://localhost:4321';
+const res = await fetch(`${base}/api/notifications`);
+const notifications = await res.json();
+---
+
+<section class="p-4">
+  <h2 class="text-2xl font-bold mb-4">Notifications</h2>
+  <ul class="space-y-2">
+    {notifications.length === 0 ? (
+      <li class="text-gray-500">No notifications.</li>
+    ) : (
+      notifications.map(note => (
+        <li key={note.notification_id} class="bg-yellow-100 border-l-4 border-yellow-500 p-3 rounded">
+          <span class="font-semibold">{note.message}</span>
+          <span class="ml-2 text-xs text-gray-500">{new Date(note.created_at).toLocaleString()}</span>
+        </li>
+      ))
+    )}
+  </ul>
+</section>

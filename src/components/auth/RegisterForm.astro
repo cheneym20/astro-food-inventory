@@ -1,0 +1,39 @@
+---
+import { useState } from 'react';
+const [email, setEmail] = useState('');
+const [password, setPassword] = useState('');
+const [error, setError] = useState('');
+const [success, setSuccess] = useState('');
+
+async function handleSubmit(e) {
+  e.preventDefault();
+  setError('');
+  setSuccess('');
+  const res = await fetch('/api/register', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email, password })
+  });
+  if (res.ok) {
+    setSuccess('Registration successful! You can now log in.');
+  } else {
+    const data = await res.json();
+    setError(data.error || 'Registration failed');
+  }
+}
+---
+
+<form class="max-w-sm mx-auto p-4 bg-white rounded shadow" on:submit={handleSubmit}>
+  <h2 class="text-xl font-bold mb-4">Register</h2>
+  {error && <div class="text-red-600 mb-2">{error}</div>}
+  {success && <div class="text-green-600 mb-2">{success}</div>}
+  <label class="block mb-2">
+    Email
+    <input type="email" class="w-full border rounded px-2 py-1" value={email} on:input={e => setEmail(e.target.value)} required />
+  </label>
+  <label class="block mb-4">
+    Password
+    <input type="password" class="w-full border rounded px-2 py-1" value={password} on:input={e => setPassword(e.target.value)} required />
+  </label>
+  <button type="submit" class="bg-indigo-600 text-white px-4 py-2 rounded">Register</button>
+</form>

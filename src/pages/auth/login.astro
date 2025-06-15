@@ -1,0 +1,47 @@
+---
+const title = 'Login';
+---
+
+<html lang="en">
+  <head>
+    <title>{title} | Food Inventory Manager</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+  </head>
+  <body class="bg-gray-50 min-h-screen flex items-center justify-center">
+    <main class="w-full max-w-md p-8 bg-white rounded shadow">
+      <h1 class="text-2xl font-bold mb-6 text-center">{title}</h1>
+      <form method="POST" action="/api/login" class="space-y-4">
+        <label class="block">
+          <span class="block text-sm font-medium text-gray-700">Email</span>
+          <input
+            name="email"
+            type="email"
+            required
+            class="mt-1 block w-full rounded border-gray-300 shadow-sm focus:ring focus:ring-indigo-200"
+            autocomplete="username"
+          />
+        </label>
+        <label class="block">
+          <span class="block text-sm font-medium text-gray-700">Password</span>
+          <input
+            name="password"
+            type="password"
+            required
+            class="mt-1 block w-full rounded border-gray-300 shadow-sm focus:ring focus:ring-indigo-200"
+            autocomplete="current-password"
+          />
+        </label>
+        <button
+          type="submit"
+          class="w-full py-2 px-4 bg-indigo-600 text-white rounded hover:bg-indigo-700 transition"
+        >
+          Log In
+        </button>
+      </form>
+      <p class="mt-4 text-center text-sm text-gray-500">
+        Don’t have an account?
+        <a href="/auth/register" class="text-indigo-600 hover:underline">Register</a>
+      </p>
+    </main>
+  </body>
+</html>
