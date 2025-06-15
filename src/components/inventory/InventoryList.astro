@@ -152,6 +152,32 @@ function attachDateInputHotkeys() {
   }
 }
 
+function attachRemoveHandlers() {
+  document.querySelectorAll('.remove-item-form').forEach(form => {
+    form.onsubmit = async (e) => {
+      e.preventDefault();
+      const id = form.getAttribute('data-id');
+      const fd = new FormData();
+      fd.append('delete_id', id);
+      const res = await fetch('/api/food-items', {
+        method: 'POST',
+        body: fd,
+      });
+      if (res.ok) {
+        // Remove from allItems and re-render
+        allItems = allItems.filter(item => String(item.item_id) !== String(id));
+        const totalPages = Math.ceil(allItems.length / pageSize);
+        if (currentPage > totalPages) currentPage = totalPages || 1;
+        renderInventoryPage(currentPage);
+        updatePaginator();
+      } else {
+        alert('Failed to remove item.');
+      }
+    };
+  });
+}
+
+// Call this after every render
 function renderInventoryPage(page) {
   const tbody = document.getElementById('inventory-table-body');
   if (!tbody) return;
@@ -187,16 +213,44 @@ function renderInventoryPage(page) {
       }).join('');
   // After rendering, re-attach hotkeys
   attachDateInputHotkeys();
+  attachRemoveHandlers();
 }
 
 function updatePaginator() {
   const pageIndicator = document.getElementById('page-indicator');
   const prevBtn = document.getElementById('prev-page');
   const nextBtn = document.getElementById('next-page');
+  const paginator = document.getElementById('inventory-paginator');
   const totalPages = Math.ceil(allItems.length / pageSize);
   pageIndicator.textContent = `Page ${currentPage} of ${totalPages}`;
   prevBtn.disabled = currentPage === 1;
   nextBtn.disabled = currentPage === totalPages || totalPages === 0;
+
+  // Add numbered page buttons
+  let pageBtns = '';
+  for (let i = 1; i <= totalPages; i++) {
+    pageBtns += `<button class="px-2 py-1 mx-1 rounded ${i === currentPage ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700'}" data-page="${i}">${i}</button>`;
+  }
+  // Remove old page buttons if any
+  let oldBtns = paginator.querySelectorAll('.page-btn');
+  oldBtns.forEach(btn => btn.remove());
+  // Insert new page buttons after prev/next
+  const nextSibling = pageIndicator.nextSibling;
+  const tempDiv = document.createElement('div');
+  tempDiv.innerHTML = pageBtns;
+  tempDiv.childNodes.forEach(btn => {
+    btn.classList.add('page-btn');
+    btn.addEventListener('click', (e) => {
+      e.preventDefault();
+      const page = parseInt(btn.dataset.page);
+      if (page !== currentPage) {
+        currentPage = page;
+        renderInventoryPage(currentPage);
+        updatePaginator();
+      }
+    });
+    paginator.insertBefore(btn, nextBtn);
+  });
 }
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -219,5 +273,80 @@ document.addEventListener('DOMContentLoaded', () => {
   });
   // Attach hotkeys on initial load
   attachDateInputHotkeys();
+
+  // Name dropdown/select logic for required attribute
+  const nameSelect = document.getElementById('name-select');
+  const nameInput = document.getElementById('name-input');
+  if (nameSelect && nameInput) {
+    nameSelect.addEventListener('change', (e) => {
+      if (nameSelect.value === '__custom__') {
+        nameInput.classList.remove('hidden');
+        nameInput.required = true;
+        nameInput.value = '';
+        nameInput.focus();
+      } else if (nameSelect.value) {
+        nameInput.classList.add('hidden');
+        nameInput.required = false;
+        nameInput.value = nameSelect.value;
+      } else {
+        nameInput.classList.add('hidden');
+        nameInput.required = true;
+        nameInput.value = '';
+      }
+    });
+    // On form submit, ensure name input is set
+    const addForm = document.getElementById('add-item-form');
+    if (addForm) {
+      addForm.addEventListener('submit', (e) => {
+        if (nameSelect.value && nameSelect.value !== '__custom__') {
+          nameInput.value = nameSelect.value;
+        }
+      });
+    }
+  }
+
+  // Add debug for add-item-form
+  const addForm = document.getElementById('add-item-form');
+  if (addForm) {
+    addForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const message = document.getElementById('add-item-message');
+      message.textContent = '';
+      const formData = new FormData(addForm);
+      const quantityValue = formData.get('quantity');
+      if (!quantityValue || isNaN(Number(quantityValue))) {
+        alert('Quantity must be a number.');
+        return;
+      }
+      const res = await fetch('/api/food-items', {
+        method: 'POST',
+        body: formData,
+      });
+      if (res.ok) {
+        addForm.reset();
+        message.textContent = 'Item added!';
+        message.className = 'ml-4 text-green-600 text-lg font-bold transition-opacity duration-3000 opacity-100';
+        setTimeout(() => {
+          message.style.transition = 'opacity 3s';
+          message.style.opacity = '0';
+        }, 10000);
+        setTimeout(() => {
+          message.textContent = '';
+          message.style.opacity = '1';
+          message.className = 'ml-4 text-sm';
+        }, 13000);
+        // Refresh inventory list
+        // Option 1: Fetch all items again (if API supports it)
+        // Option 2: Add the new item to allItems and re-render
+        // For now, just reload the page as a fallback
+        // location.reload();
+        // Option 2: Try to fetch and update client-side
+        // (You can implement a fetchInventory function for this)
+      } else {
+        message.textContent = 'Error adding item.';
+        message.className = 'ml-4 text-red-600 text-sm';
+      }
+    });
+  }
 });
 </script>
