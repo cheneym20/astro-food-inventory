@@ -55,7 +55,7 @@ const { items = [], uniqueNames = [] } = Astro.props;
         {Array.isArray(items) && items.length === 0 ? (
           <tr><td colspan="5" class="text-center py-4">No items found.</td></tr>
         ) : (
-          Array.isArray(items) && items.slice(0, 10).map(item => {
+          Array.isArray(items) && items.map(item => {
             let exp = '';
             if (item && item.expiration_date) {
               if (typeof item.expiration_date === 'string') {
@@ -226,20 +226,14 @@ function updatePaginator() {
   prevBtn.disabled = currentPage === 1;
   nextBtn.disabled = currentPage === totalPages || totalPages === 0;
 
-  // Add numbered page buttons
-  let pageBtns = '';
-  for (let i = 1; i <= totalPages; i++) {
-    pageBtns += `<button class="px-2 py-1 mx-1 rounded ${i === currentPage ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700'}" data-page="${i}">${i}</button>`;
-  }
   // Remove old page buttons if any
-  let oldBtns = paginator.querySelectorAll('.page-btn');
-  oldBtns.forEach(btn => btn.remove());
+  paginator.querySelectorAll('.page-btn').forEach(btn => btn.remove());
   // Insert new page buttons after prev/next
-  const nextSibling = pageIndicator.nextSibling;
-  const tempDiv = document.createElement('div');
-  tempDiv.innerHTML = pageBtns;
-  tempDiv.childNodes.forEach(btn => {
-    btn.classList.add('page-btn');
+  for (let i = 1; i <= totalPages; i++) {
+    const btn = document.createElement('button');
+    btn.className = `px-2 py-1 mx-1 rounded page-btn ${i === currentPage ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700'}`;
+    btn.dataset.page = i;
+    btn.textContent = i;
     btn.addEventListener('click', (e) => {
       e.preventDefault();
       const page = parseInt(btn.dataset.page);
@@ -249,8 +243,8 @@ function updatePaginator() {
         updatePaginator();
       }
     });
-    paginator.insertBefore(btn, nextBtn);
-  });
+    nextBtn.parentNode.insertBefore(btn, nextBtn);
+  }
 }
 
 document.addEventListener('DOMContentLoaded', () => {
