@@ -91,9 +91,66 @@ const { items = [], uniqueNames = [] } = Astro.props;
   </div>
 </section>
 <script is:client>
-let allItems = Array.isArray(items) ? [...items] : [];
+// Get initial items from the server-rendered table rows
+let allItems = [];
+const tableRows = document.querySelectorAll('#inventory-table-body tr');
+tableRows.forEach(row => {
+  const cells = row.querySelectorAll('td');
+  if (cells.length >= 5) {
+    allItems.push({
+      name: cells[0].textContent.trim(),
+      quantity: cells[1].textContent.trim(),
+      location: cells[2].textContent.trim(),
+      expiration_date: cells[3].textContent.trim(),
+      item_id: row.getAttribute('key') || row.dataset.id || Math.random().toString(36).slice(2)
+    });
+  }
+});
 let currentPage = 1;
 const pageSize = 10;
+
+function attachDateInputHotkeys() {
+  const dateInput = document.getElementById('expiration-date-input');
+  if (dateInput && !dateInput._hotkeysAttached) {
+    dateInput.addEventListener('keydown', (e) => {
+      const input = e.target;
+      const today = new Date();
+      function formatDate(d) {
+        return d.toISOString().slice(0, 10);
+      }
+      let d = input.value ? new Date(input.value) : today;
+      if (e.key === 't' || e.key === 'T') {
+        input.value = formatDate(today);
+        e.preventDefault();
+      } else if (e.key === 'l' || e.key === 'L') {
+        d.setDate(d.getDate() + 1);
+        input.value = formatDate(d);
+        e.preventDefault();
+      } else if (e.key === 'j' || e.key === 'J') {
+        d.setDate(d.getDate() - 1);
+        input.value = formatDate(d);
+        e.preventDefault();
+      } else if (e.key === 'i' || e.key === 'I') {
+        d.setMonth(d.getMonth() + 1);
+        input.value = formatDate(d);
+        e.preventDefault();
+      } else if (e.key === 'u' || e.key === 'U') {
+        d.setMonth(d.getMonth() - 1);
+        input.value = formatDate(d);
+        e.preventDefault();
+      } else if (e.key === ',') {
+        d.setFullYear(d.getFullYear() + 1);
+        input.value = formatDate(d);
+        e.preventDefault();
+      } else if (e.key === 'm' || e.key === 'M') {
+        d.setFullYear(d.getFullYear() - 1);
+        input.value = formatDate(d);
+        e.preventDefault();
+      }
+    });
+    dateInput._hotkeysAttached = true;
+  }
+}
 
 function renderInventoryPage(page) {
   const tbody = document.getElementById('inventory-table-body');
@@ -128,6 +185,8 @@ function renderInventoryPage(page) {
           </tr>
         `;
       }).join('');
+  // After rendering, re-attach hotkeys
+  attachDateInputHotkeys();
 }
 
 function updatePaginator() {
@@ -158,5 +217,7 @@ document.addEventListener('DOMContentLoaded', () => {
       updatePaginator();
     }
   });
+  // Attach hotkeys on initial load
+  attachDateInputHotkeys();
 });
 </script>
